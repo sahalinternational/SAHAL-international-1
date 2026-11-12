@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sahal International - Sales, Stock & P&L Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #1A365D; /* Deep corporate blue */
+            --secondary: #2B6CB0;
+            --accent: #EBF8FF;
+            --bg-color: #F7FAFC;
+            --text-dark: #2D3748;
+            --text-muted: #718096;
+            --success: #38A169;
+            --danger: #E53E3E;
+            --warning: #DD6B20;
+            --card-bg: #FFFFFF;
+            --border-radius: 10px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --font-family: 'Segoe UI', Inter, system-ui, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--card-bg);
+            border-right: 1px solid #E2E8F0;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 40px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .brand span { color: var(--secondary); }
+
+        .filter-section h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group { margin-bottom: 20px; }
+
+        .filter-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #CBD5E0;
+            border-radius: 6px;
+            background-color: #F8FAFC;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .filter-group select:focus { border-color: var(--secondary); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 { font-size: 1.8rem; color: var(--primary); }
+        .header p { color: var(--text-muted); font-size: 0.95rem; margin-top: 5px; }
+
+        /* Alerts Panel */
+        .alerts-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .alert-card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            border-left: 5px solid var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .alert-card.danger { border-left-color: var(--danger); }
+        .alert-card.warning { border-left-color: var(--warning); }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+        }
+
+        .alert-card.danger .alert-header { color: var(--danger); }
+        .alert-card.warning .alert-header { color: var(--warning); }
+
+        .alert-content { font-size: 0.9rem; color: var(--text-dark); line-height: 1.5; }
+        .alert-value { font-size: 1.4rem; font-weight: bold; margin-top: 8px; color: var(--text-dark); }
+
+        /* KPI Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .kpi-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        
+        .kpi-margin { font-size: 0.9rem; margin-top: 5px; font-weight: 600; }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .charts-grid-bottom {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            position: relative;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container h3 {
+            font-size: 1.05rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .charts-grid, .charts-grid-bottom { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid #E2E8F0; }
+            .main-content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar / Filters -->
+    <div class="sidebar">
+        <div class="brand">
+            SAHAL <span>INT.</span>
+        </div>
+        
+        <div class="filter-section">
+            <h3>Dashboard Filters</h3>
+            
+            <div class="filter-group">
+                <label for="monthFilter">Select Period</label>
+                <select id="monthFilter" onchange="renderDashboard()">
+                    <option value="All">All Year (YTD)</option>
+                    <option value="Jan">January</option>
+                    <option value="Feb">February</option>
+                    <option value="Mar">March</option>
+                    <option value="Apr">April</option>
+                    <option value="May">May</option>
+                    <option value="Jun">June</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="categoryFilter">Product Category</label>
+                <select id="categoryFilter" onchange="renderDashboard()">
+                    <option value="All">All Categories</option>
+                    <option value="Skincare">Skincare</option>
+                    <option value="Cosmetics">Cosmetics</option>
+                    <option value="Bodycare">Bodycare</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <div>
+                <h1>Sales, Stock & P&L Dashboard</h1>
+                <p>Interactive Financial & Inventory Overview | Currency: BDT (৳)</p>
+            </div>
+        </div>
+
+        <!-- System Alerts Panel -->
+        <div class="alerts-panel">
+            <div class="alert-card danger">
+                <div class="alert-header">⚠️ Stockout Risk</div>
+                <div class="alert-content" id="alertLowStock">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <div class="alert-card warning">
+                <div class="alert-header">🧊 Capital Tied Up (Dead Stock)</div>
+                <div class="alert-content">Value of non-moving inventory:</div>
+                <div class="alert-value" id="alertDeadStock">৳0</div>
+            </div>
+            
+            <div class="alert-card danger">
+                <div class="alert-header">🔻 Operational Shrinkage</div>
+                <div class="alert-content">Recorded inventory loss/damage value:</div>
+                <div class="alert-value" id="alertShrinkage">৳0</div>
+            </div>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Total Sales (Revenue)</div>
+                <div class="kpi-value" id="kpiSales">৳0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Cost of Goods Sold (COGS)</div>
+                <div class="kpi-value" id="kpiCogs">৳0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Gross Profit</div>
+                <div class="kpi-value" id="kpiGrossProfit">৳0</div>
+                <div class="kpi-margin" id="kpiGrossMargin">Margin: 0%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Net Profit</div>
+                <div class="kpi-value" id="kpiNetProfit">৳0</div>
+                <div class="kpi-margin" id="kpiNetMargin">Margin: 0%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Current Inventory Value</div>
+                <div class="kpi-value" id="kpiInvValue">৳0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Inventory Turnover</div>
+                <div class="kpi-value" id="kpiTurnover">0.0x</div>
+            </div>
+        </div>
+
+        <!-- Charts Grid Top -->
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>P&L Trend Over Time (Revenue vs. Profit)</h3>
+                <div class="canvas-wrapper">
+                    <canvas id="plTrendChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h3>Stock Health Distribution</h3>
+                <div class="canvas-wrapper">
+                    <canvas id="stockHealthChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid Bottom -->
+        <div class="charts-grid-bottom">
+            <div class="chart-container">
+                <h3>Top Products by Profit Margin</h3>
+                <div class="canvas-wrapper">
+                    <canvas id="marginChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h3>Operating Expense Breakdown</h3>
+                <div class="canvas-wrapper">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. MOCK DATA GENERATION ---
+        const products = [
+            { name: "Intense White Night Cream", category: "Skincare", unitCost: 150, price: 350 },
+            { name: "Whitening Face Wash", category: "Skincare", unitCost: 80, price: 180 },
+            { name: "Aloe Vera Face Mask", category: "Skincare", unitCost: 60, price: 150 },
+            { name: "Lip & Cheek Pink Gel", category: "Cosmetics", unitCost: 45, price: 120 },
+            { name: "Brightening Eye Cream", category: "Cosmetics", unitCost: 90, price: 220 },
+            { name: "Beautiful Green Shower Gel", category: "Bodycare", unitCost: 110, price: 280 },
+            { name: "Papaya Honey Soap", category: "Bodycare", unitCost: 40, price: 90 },
+            { name: "Gold Caviar Day Cream", category: "Skincare", unitCost: 160, price: 380 }
+        ];
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        let dataset = [];
+
+        // Global monthly expenses
+        const monthlyExpenses = {
+            'Jan': { rent: 20000, salaries: 45000, marketing: 12000, shrinkage: 2500 },
+            'Feb': { rent: 20000, salaries: 45000, marketing: 15000, shrinkage: 1800 },
+            'Mar': { rent: 20000, salaries: 46000, marketing: 10000, shrinkage: 3000 },
+            'Apr': { rent: 20000, salaries: 46000, marketing: 18000, shrinkage: 1500 },
+            'May': { rent: 20000, salaries: 47000, marketing: 20000, shrinkage: 4000 },
+            'Jun': { rent: 20000, salaries: 47000, marketing: 15000, shrinkage: 2200 }
+        };
+
+        // Generate Row Data
+        months.forEach(month => {
+            products.forEach(prod => {
+                // Simulate sales and stock
+                let beginningInv = Math.floor(Math.random() * 500) + 100; // 100 to 600
+                let unitsSold = Math.floor(Math.random() * (beginningInv - 20)); // Keep some stock
+                if (unitsSold < 0) unitsSold = 0;
+                
+                // Introduce some dead stock scenarios (low sales, high inv)
+                if (Math.random() > 0.85) unitsSold = Math.floor(Math.random() * 10); 
+                
+                let endingInv = beginningInv - unitsSold;
+                
+                // Determine Stock Status
+                let status = "Healthy";
+                if (endingInv < 50 && unitsSold > 50) status = "Low Stock";
+                if (endingInv > 200 && unitsSold < 20) status = "Dead Stock";
+
+                dataset.push({
+                    month: month,
+                    category: prod.category,
+                    productName: prod.name,
+                    unitCost: prod.unitCost,
+                    unitPrice: prod.price,
+                    beginningInv: beginningInv,
+                    unitsSold: unitsSold,
+                    endingInv: endingInv,
+                    salesRevenue: unitsSold * prod.price,
+                    cogs: unitsSold * prod.unitCost,
+                    status: status
+                });
+            });
+        });
+
+        // Chart instances holder
+        let charts = {};
+
+        // Utility: Format Currency
+        const fmtTaka = (num) => {
+            return '৳' + Math.round(num).toLocaleString('en-IN');
+        };
+
+        // --- 2. MAIN RENDER FUNCTION ---
+        function renderDashboard() {
+            const selectedMonth = document.getElementById('monthFilter').value;
+            const selectedCat = document.getElementById('categoryFilter').value;
+
+            // Filter Data
+            let filteredData = dataset.filter(d => {
+                const matchMonth = (selectedMonth === 'All' || d.month === selectedMonth);
+                const matchCat = (selectedCat === 'All' || d.category === selectedCat);
+                return matchMonth && matchCat;
+            });
+
+            // Aggregate metrics
+            let totalSales = 0;
+            let totalCogs = 0;
+            let totalEndInvValue = 0;
+            let totalBegInvValue = 0;
+            
+            // For Alerts
+            let deadStockValue = 0;
+            let lowStockItems = [];
+
+            filteredData.forEach(d => {
+                totalSales += d.salesRevenue;
+                totalCogs += d.cogs;
+                totalEndInvValue += (d.endingInv * d.unitCost);
+                totalBegInvValue += (d.beginningInv * d.unitCost);
+
+                if (d.status === 'Dead Stock') {
+                    deadStockValue += (d.endingInv * d.unitCost);
+                }
+                if (d.status === 'Low Stock') {
+                    // Check if already in list to aggregate units
+                    let existing = lowStockItems.find(i => i.name === d.productName);
+                    if (existing) {
+                        existing.stock += d.endingInv;
+                    } else {
+                        lowStockItems.push({ name: d.productName, stock: d.endingInv });
+                    }
+                }
+            });
+
+            // Handle Expenses (If category is filtered, we might allocate expenses, but for simplicity we keep global expenses intact based on month filter only)
+            let totalOpEx = 0;
+            let expBreakdown = { rent: 0, salaries: 0, marketing: 0, shrinkage: 0 };
+            
+            if (selectedMonth === 'All') {
+                months.forEach(m => {
+                    expBreakdown.rent += monthlyExpenses[m].rent;
+                    expBreakdown.salaries += monthlyExpenses[m].salaries;
+                    expBreakdown.marketing += monthlyExpenses[m].marketing;
+                    expBreakdown.shrinkage += monthlyExpenses[m].shrinkage;
+                });
+            } else {
+                expBreakdown.rent = monthlyExpenses[selectedMonth].rent;
+                expBreakdown.salaries = monthlyExpenses[selectedMonth].salaries;
+                expBreakdown.marketing = monthlyExpenses[selectedMonth].marketing;
+                expBreakdown.shrinkage = monthlyExpenses[selectedMonth].shrinkage;
+            }
+            
+            totalOpEx = expBreakdown.rent + expBreakdown.salaries + expBreakdown.marketing + expBreakdown.shrinkage;
+
+            // Financial Math
+            let grossProfit = totalSales - totalCogs;
+            let netProfit = grossProfit - totalOpEx;
+            
+            let grossMargin = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0;
+            let netMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
+            
+            let avgInvValue = (totalBegInvValue + totalEndInvValue) / 2;
+            let inventoryTurnover = avgInvValue > 0 ? (totalCogs / avgInvValue) : 0;
+
+            // Update DOM KPIs
+            document.getElementById('kpiSales').innerText = fmtTaka(totalSales);
+            document.getElementById('kpiCogs').innerText = fmtTaka(totalCogs);
+            
+            document.getElementById('kpiGrossProfit').innerText = fmtTaka(grossProfit);
+            document.getElementById('kpiGrossMargin').innerText = `Margin: ${grossMargin.toFixed(1)}%`;
+            
+            const npEl = document.getElementById('kpiNetProfit');
+            npEl.innerText = fmtTaka(netProfit);
+            npEl.className = 'kpi-value ' + (netProfit >= 0 ? 'text-success' : 'text-danger');
+            document.getElementById('kpiNetMargin').innerText = `Margin: ${netMargin.toFixed(1)}%`;
+            
+            document.getElementById('kpiInvValue').innerText = fmtTaka(totalEndInvValue);
+            document.getElementById('kpiTurnover').innerText = inventoryTurnover.toFixed(2) + 'x';
+
+            // Update Alerts
+            document.getElementById('alertDeadStock').innerText = fmtTaka(deadStockValue);
+            document.getElementById('alertShrinkage').innerText = fmtTaka(expBreakdown.shrinkage);
+            
+            const lowStockEl = document.getElementById('alertLowStock');
+            lowStockItems.sort((a, b) => a.stock - b.stock); // Ascending order (lowest stock first)
+            const top3Low = lowStockItems.slice(0, 3);
+            
+            if (top3Low.length > 0) {
+                let html = '<ul>';
+                top3Low.forEach(item => {
+                    html += `<li style="margin-bottom:4px;"><strong>${item.name}</strong>: Only ${item.stock} units left!</li>`;
+                });
+                html += '</ul>';
+                lowStockEl.innerHTML = html;
+            } else {
+                lowStockEl.innerHTML = '<span style="color:var(--success);font-weight:bold;">All inventory levels healthy.</span>';
+            }
+
+            // Render Charts
+            updateTrendChart(dataset, selectedMonth, selectedCat);
+            updateStockChart(filteredData);
+            updateMarginChart(filteredData);
+            updateExpenseChart(expBreakdown);
+        }
+
+        // --- 3. CHART RENDERERS ---
+
+        function initOrUpdateChart(id, config) {
+            if (charts[id]) charts[id].destroy();
+            const ctx = document.getElementById(id).getContext('2d');
+            charts[id] = new Chart(ctx, config);
+        }
+
+        // Chart 1: P&L Trend (Combo)
+        function updateTrendChart(allData, selectedMonth, selectedCat) {
+            // Aggregate globally over months to show trend, respecting category filter
+            let labels = months;
+            let salesData = [];
+            let cogsData = [];
+            let netProfitData = [];
+
+            months.forEach(m => {
+                let mData = allData.filter(d => d.month === m && (selectedCat === 'All' || d.category === selectedCat));
+                let mSales = mData.reduce((sum, d) => sum + d.salesRevenue, 0);
+                let mCogs = mData.reduce((sum, d) => sum + d.cogs, 0);
+                
+                // Subtract month's expenses for net profit
+                let mOpEx = monthlyExpenses[m].rent + monthlyExpenses[m].salaries + monthlyExpenses[m].marketing + monthlyExpenses[m].shrinkage;
+                let mNP = (mSales - mCogs) - mOpEx;
+
+                salesData.push(mSales);
+                cogsData.push(mCogs);
+                netProfitData.push(mNP);
+            });
+
+            initOrUpdateChart('plTrendChart', {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { type: 'line', label: 'Net Profit', data: netProfitData, borderColor: '#38A169', backgroundColor: '#38A169', borderWidth: 3, fill: false, yAxisID: 'y1' },
+                        { type: 'bar', label: 'Sales', data: salesData, backgroundColor: '#2B6CB0', yAxisID: 'y' },
+                        { type: 'bar', label: 'COGS', data: cogsData, backgroundColor: '#CBD5E0', yAxisID: 'y' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: { type: 'linear', display: true, position: 'left', ticks: { callback: v => '৳' + (v/1000) + 'k' } },
+                        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { callback: v => '৳' + (v/1000) + 'k' } }
+                    }
+                }
+            });
+        }
+
+        // Chart 2: Stock Health (Doughnut)
+        function updateStockChart(filteredData) {
+            let healthy = 0, low = 0, dead = 0;
+            
+            filteredData.forEach(d => {
+                if (d.status === 'Healthy') healthy += d.endingInv;
+                else if (d.status === 'Low Stock') low += d.endingInv;
+                else if (d.status === 'Dead Stock') dead += d.endingInv;
+            });
+
+            initOrUpdateChart('stockHealthChart', {
+                type: 'doughnut',
+                data: {
+                    labels: ['Healthy Stock', 'Low Stock', 'Dead Stock'],
+                    datasets: [{
+                        data: [healthy, low, dead],
+                        backgroundColor: ['#38A169', '#DD6B20', '#E53E3E'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // Chart 3: Top Products by Margin (Horizontal Bar)
+        function updateMarginChart(filteredData) {
+            // Aggregate by product
+            let prodMap = {};
+            filteredData.forEach(d => {
+                if(!prodMap[d.productName]) {
+                    prodMap[d.productName] = { sales: 0, cogs: 0 };
+                }
+                prodMap[d.productName].sales += d.salesRevenue;
+                prodMap[d.productName].cogs += d.cogs;
+            });
+
+            // Calculate margin and sort
+            let prodArr = Object.keys(prodMap).map(k => {
+                let p = prodMap[k];
+                let margin = p.sales > 0 ? ((p.sales - p.cogs) / p.sales) * 100 : 0;
+                return { name: k, margin: margin };
+            });
+
+            prodArr.sort((a, b) => b.margin - a.margin);
+            let top5 = prodArr.slice(0, 5);
+
+            initOrUpdateChart('marginChart', {
+                type: 'bar',
+                data: {
+                    labels: top5.map(p => p.name),
+                    datasets: [{
+                        label: 'Gross Margin %',
+                        data: top5.map(p => p.margin.toFixed(1)),
+                        backgroundColor: '#2B6CB0',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { x: { max: 100, ticks: { callback: v => v + '%' } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Chart 4: Expense Breakdown (Pie)
+        function updateExpenseChart(exp) {
+            initOrUpdateChart('expenseChart', {
+                type: 'pie',
+                data: {
+                    labels: ['Rent', 'Salaries', 'Marketing', 'Shrinkage/Loss'],
+                    datasets: [{
+                        data: [exp.rent, exp.salaries, exp.marketing, exp.shrinkage],
+                        backgroundColor: ['#4299E1', '#F6AD55', '#9F7AEA', '#FC8181'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'right' },
+                        tooltip: { callbacks: { label: (ctx) => ' ' + fmtTaka(ctx.raw) } }
+                    }
+                }
+            });
+        }
+
+        // Initialize on load
+        window.onload = renderDashboard;
+
+    </script>
+</body>
+</html>
